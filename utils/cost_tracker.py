@@ -1,5 +1,4 @@
-import sqlite3
-from utils.db_utils import DB_PATH
+from utils.db_utils import SessionLocal, CostLog  # Import your SQLAlchemy session and model
 
 def estimate_cost(duration_sec: float, gpt_input: int, gpt_output: int, tts_chars: int) -> float:
     """
@@ -15,24 +14,26 @@ def estimate_cost(duration_sec: float, gpt_input: int, gpt_output: int, tts_char
 
 def log_cost(token: str, duration_sec: float, gpt_input: int, gpt_output: int, tts_chars: int):
     """
-    Logs usage and estimated cost to the cost_log table.
+    Logs usage and estimated cost to the cost_log table using SQLAlchemy.
     """
     cost_usd = estimate_cost(duration_sec, gpt_input, gpt_output, tts_chars)
 
-    with sqlite3.connect(DB_PATH) as conn:
-        c = conn.cursor()
-        c.execute('''
-            INSERT INTO cost_log (
-                token, duration_sec, gpt_input, gpt_output, tts_chars, cost_usd
-            ) VALUES (?, ?, ?, ?, ?, ?)
-        ''', (
-            token,
-            duration_sec,
-            gpt_input,
-            gpt_output,
-            tts_chars,
-            cost_usd
-        ))
-        conn.commit()
-
-    print(f"💸 Cost logged: ${cost_usd} for token {token}")
+    session = SessionLocal()
+    try:
+        log = CostLog(
+            token=token,
+            duration_sec=duration_sec,
+            gpt_input=gpt_input,
+            gpt_output=gpt_output,
+            tts_chars=tts_chars,
+            cost_usd=cost_usd
+        )
+        session.add(log)
+        session.commit()
+        print(f"💸 Cost logged: ${cost_usd} for token {token}")
+    except Exception as e:
+        session.rollback()
+        print(f"Failed to log cost: {e}")
+        raise
+    finally:
+        session.close()

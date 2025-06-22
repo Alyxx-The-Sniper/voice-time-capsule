@@ -1,9 +1,3 @@
-# requirements.txt
-# ⚠️ NOTE: This project also requires ffmpeg to be installed on your system. (outside .venv)
-# On Windows: choco install ffmpeg
-# On macOS: brew install ffmpeg
-# On Linux: sudo apt install ffmpeg
-
 pandas==2.3.0
 huggingface_hub==0.33.0  # For LLaMA 3
 Flask==2.3.2
@@ -27,3 +21,16 @@ numpy<2.0.0
 ## for docker
 # RUN apt-get update && apt-get install -y ffmpeg
 gunicorn
+
+
+## migrate to posgresql
+flask_sqlalchemy
+psycopg2-binary
+sqlalchemy
+
+
+# requirements.txt
+# ⚠️ NOTE: This project also requires ffmpeg to be installed on your system. (outside .venv)
+# On Windows: choco install ffmpeg
+# On macOS: brew install ffmpeg
+# On Linux: sudo apt install ffmpeg

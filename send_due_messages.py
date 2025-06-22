@@ -1,18 +1,11 @@
 import argparse
-import sqlite3
-from datetime import date, datetime
+from datetime import date
 from utils import db_utils, email_utils
 import sys
 
 def get_due_messages(today: str) -> list[dict]:
-    from utils.db_utils import DB_PATH
-
-    with sqlite3.connect(DB_PATH) as conn:
-        conn.row_factory = sqlite3.Row
-        c = conn.cursor()
-        c.execute("SELECT * FROM messages WHERE delivery_date = ? AND delivered_at IS NULL", (today,))
-        rows = c.fetchall()
-        return [dict(row) for row in rows]
+    # Use the existing SQLAlchemy function you already have
+    return db_utils.get_due_undelivered_messages(today)
 
 def run_scheduler(due_messages: list[dict], deliver: bool):
     today = date.today().isoformat()
@@ -22,16 +15,13 @@ def run_scheduler(due_messages: list[dict], deliver: bool):
         print("❌ Delivery cancelled. No emails sent.")
         return
 
-    with sqlite3.connect(db_utils.DB_PATH) as conn:
-        c = conn.cursor()
-        for msg in due_messages:
-            token = msg["token"]
-            email = msg["email"]
-            email_utils.send_delivery_email(email, token)
-            print(f"✅ Sent message to {email} (token: {token})")
-            delivered_time = datetime.utcnow().isoformat()
-            c.execute("UPDATE messages SET delivered_at = ? WHERE token = ?", (delivered_time, token))
-        conn.commit()
+    # Use the db_utils function to mark as delivered
+    for msg in due_messages:
+        token = msg["token"]
+        email = msg["email"]
+        email_utils.send_delivery_email(email, token)
+        print(f"✅ Sent message to {email} (token: {token})")
+        db_utils.mark_message_delivered(token)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Deliver scheduled messages.")
@@ -50,9 +40,4 @@ if __name__ == "__main__":
     if args.yes:
         proceed = True
     elif args.no:
-        proceed = False
-    else:
-        ans = input("Do you want to deliver scheduled messages? (y/n): ").strip().lower()
-        proceed = (ans == 'y')
-
-    run_scheduler(due_messages, proceed)
+        proceed = Fals

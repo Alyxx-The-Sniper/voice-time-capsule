@@ -1,57 +1,50 @@
-import sqlite3
-from datetime import datetime, timezone
-from typing import Union
 import os
+from datetime import datetime, timezone
+from typing import Union, List
+from sqlalchemy import create_engine, func, Column, String, Float, Integer
+from sqlalchemy.orm import sessionmaker, declarative_base
+from sqlalchemy.exc import IntegrityError
 
-DB_PATH = "db.sqlite"
+DATABASE_URL = os.environ.get('DATABASE_URL', 'sqlite:///db.sqlite')
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+
+engine = create_engine(DATABASE_URL)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+Base = declarative_base()
+
+class Message(Base):
+    __tablename__ = 'messages'
+    token = Column(String, primary_key=True)
+    email = Column(String)
+    ip = Column(String)
+    created_at = Column(String)
+    delivery_date = Column(String)
+    original_audio = Column(String)
+    ai_audio = Column(String)
+    transcript = Column(String)
+    enhanced_text = Column(String)
+    voice_id = Column(String)
+    delivered_at = Column(String, nullable=True)
+
+class CostLog(Base):
+    __tablename__ = 'cost_log'
+    token = Column(String, primary_key=True)
+    duration_sec = Column(Float)
+    gpt_input = Column(Integer)
+    gpt_output = Column(Integer)
+    tts_chars = Column(Integer)
+    cost_usd = Column(Float, nullable=True)
+
+
+# ---- UTILS ----
 
 def strip_path(path):
     return os.path.basename(path) if path else path
 
 def init_db():
-    """Initialize database and create required tables if they don't exist.
-    Also adds delivered_at and ip columns if missing (for legacy dbs)."""
-    with sqlite3.connect(DB_PATH) as conn:
-        c = conn.cursor()
-
-        # Messages table (with delivered_at and ip columns)
-        c.execute('''
-            CREATE TABLE IF NOT EXISTS messages (
-                token TEXT PRIMARY KEY,
-                email TEXT,
-                ip TEXT,
-                created_at TEXT,
-                delivery_date TEXT,
-                original_audio TEXT,
-                ai_audio TEXT,
-                transcript TEXT,
-                enhanced_text TEXT,
-                voice_id TEXT,
-                delivered_at TEXT
-            )
-        ''')
-
-        # For legacy: add delivered_at and ip if they don't exist
-        c.execute("PRAGMA table_info(messages)")
-        columns = [col[1] for col in c.fetchall()]
-        if "delivered_at" not in columns:
-            c.execute("ALTER TABLE messages ADD COLUMN delivered_at TEXT")
-        if "ip" not in columns:
-            c.execute("ALTER TABLE messages ADD COLUMN ip TEXT")
-
-        # Cost log table
-        c.execute('''
-            CREATE TABLE IF NOT EXISTS cost_log (
-                token TEXT PRIMARY KEY,
-                duration_sec REAL,
-                gpt_input INTEGER,
-                gpt_output INTEGER,
-                tts_chars INTEGER,
-                cost_usd REAL
-            )
-        ''')
-
-        conn.commit()
+    """Create tables if they don't exist."""
+    Base.metadata.create_all(bind=engine)
 
 def insert_message(
     token: str,
@@ -65,60 +58,67 @@ def insert_message(
     enhanced_text: str,
     voice_id: str
 ) -> None:
-    """Insert a new message into the messages table."""
-    with sqlite3.connect(DB_PATH) as conn:
-        c = conn.cursor()
-        c.execute('''
-            INSERT INTO messages (
-                token, email, ip, created_at, delivery_date,
-                original_audio, ai_audio, transcript, enhanced_text, voice_id, delivered_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)
-        ''', (
-            token,
-            email,
-            ip,
-            created_at,
-            delivery_date,
-            original_audio,
-            ai_audio,
-            transcript,
-            enhanced_text,
-            voice_id
-        ))
-        conn.commit()
+    """Insert a new message."""
+    session = SessionLocal()
+    try:
+        msg = Message(
+            token=token,
+            email=email,
+            ip=ip,
+            created_at=created_at,
+            delivery_date=delivery_date,
+            original_audio=original_audio,
+            ai_audio=ai_audio,
+            transcript=transcript,
+            enhanced_text=enhanced_text,
+            voice_id=voice_id,
+            delivered_at=None,
+        )
+        session.add(msg)
+        session.commit()
+    except IntegrityError:
+        session.rollback()
+        raise
+    finally:
+        session.close()
 
 def mark_message_delivered(token: str) -> None:
     """Mark a message as delivered by setting delivered_at to now."""
-    now = datetime.now(timezone.utc).isoformat()
-    with sqlite3.connect(DB_PATH) as conn:
-        c = conn.cursor()
-        c.execute("UPDATE messages SET delivered_at = ? WHERE token = ?", (now, token))
-        conn.commit()
+    session = SessionLocal()
+    try:
+        msg = session.query(Message).filter_by(token=token).first()
+        if msg:
+            msg.delivered_at = datetime.now(timezone.utc).isoformat()
+            session.commit()
+    finally:
+        session.close()
 
 def get_message_by_token(token: str) -> Union[dict, None]:
     """Retrieve a message by its token."""
-    with sqlite3.connect(DB_PATH) as conn:
-        conn.row_factory = sqlite3.Row
-        c = conn.cursor()
-        c.execute("SELECT * FROM messages WHERE token = ?", (token,))
-        row = c.fetchone()
-        return dict(row) if row else None
+    session = SessionLocal()
+    try:
+        msg = session.query(Message).filter_by(token=token).first()
+        return msg.__dict__ if msg else None
+    finally:
+        session.close()
 
-def get_due_undelivered_messages(today: str) -> list[dict]:
+def get_due_undelivered_messages(today: str) -> List[dict]:
     """Retrieve all messages scheduled for today that haven't been delivered."""
-    with sqlite3.connect(DB_PATH) as conn:
-        conn.row_factory = sqlite3.Row
-        c = conn.cursor()
-        c.execute("SELECT * FROM messages WHERE delivery_date = ? AND delivered_at IS NULL", (today,))
-        rows = c.fetchall()
-        return [dict(row) for row in rows]
+    session = SessionLocal()
+    try:
+        msgs = session.query(Message).filter_by(delivery_date=today, delivered_at=None).all()
+        return [msg.__dict__ for msg in msgs]
+    finally:
+        session.close()
 
 def count_submissions_by_ip(ip: str, date_str: str) -> int:
     """Count how many submissions an IP made on a specific date."""
-    with sqlite3.connect(DB_PATH) as conn:
-        c = conn.cursor()
-        c.execute('''
-            SELECT COUNT(*) FROM messages
-            WHERE ip = ? AND DATE(created_at) = ?
-        ''', (ip, date_str))
-        return c.fetchone()[0]
+    session = SessionLocal()
+    try:
+        count = session.query(func.count(Message.token)).filter(
+            Message.ip == ip,
+            func.DATE(Message.created_at) == date_str
+        ).scalar()
+        return count
+    finally:
+        session.close()
