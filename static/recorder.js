@@ -111,7 +111,7 @@ const steps = [
   "🛰️ Dispatching capsule to the future..."
 ];
 
-const totalDuration = 9500; // 5 seconds for full "loading"
+const totalDuration = 12000; // 12 seconds for full "loading"
 const stepDuration = totalDuration / steps.length;
 
 let fakeInterval, stepTimeouts = [];
