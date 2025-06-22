@@ -1,15 +1,20 @@
 import os
-import whisper
 import ffmpeg
+from huggingface_hub import InferenceClient
 
-# Load the Whisper model once
-model = whisper.load_model("base")  # or “small” / “medium” / “large”
+HF_TOKEN = os.environ.get("HF_TOKEN", "")
+
+# Create a global client
+client = InferenceClient(
+    model="openai/whisper-large-v3",
+    token=HF_TOKEN,
+    # provider="fal-ai"  # No longer needed for standard Inference Endpoints
+)
 
 def get_duration_sec(audio_path: str) -> float:
     """Return the audio duration in seconds using ffmpeg.probe, or 0 if missing."""
     abs_path = os.path.abspath(audio_path).replace("\\", "/")
     info = ffmpeg.probe(abs_path)
-    # Use .get to avoid KeyError, and fallback to 0.0 if not found
     duration_str = info.get("format", {}).get("duration", None)
     try:
         return float(duration_str) if duration_str else 0.0
@@ -18,17 +23,14 @@ def get_duration_sec(audio_path: str) -> float:
 
 def transcribe(input_path: str) -> tuple[str, float]:
     """
-    Transcribes the audio at input_path and returns:
+    Transcribes the audio at input_path using Hugging Face InferenceClient and returns:
       • text: the transcript
       • duration: length in seconds, rounded to 2dp
     """
-    # normalize to absolute, Unix-style path
     abs_path = os.path.abspath(input_path).replace("\\", "/")
-
-    # Let Whisper handle decoding directly
-    result = model.transcribe(abs_path)
-    text = result["text"].strip()
-
-    # Get duration via ffmpeg.probe
+    # This function automatically detects file format (wav, mp3, m4a, flac, etc.)
+    result = client.automatic_speech_recognition(abs_path)
+    # Result is just a dict: {'text': "..."}
+    text = result.get("text", "").strip()
     duration = get_duration_sec(input_path)
     return text, round(duration, 2)
