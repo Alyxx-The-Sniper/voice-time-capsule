@@ -20,17 +20,17 @@ numpy<2.0.0
 
 ## for docker
 # RUN apt-get update && apt-get install -y ffmpeg
-gunicorn
+gunicorn==23.0.0
 
 
 ## migrate to posgresql
-flask_sqlalchemy
-psycopg2-binary
-sqlalchemy
+flask_sqlalchemy==3.1.1
+psycopg2-binary==2.9.10
+sqlalchemy==2.0.41
 
 
 # requirements.txt
-# ⚠️ NOTE: This project also requires ffmpeg to be installed on your system. (outside .venv)
+# NOTE: This project also requires ffmpeg to be installed on your system. (outside .venv)
 # On Windows: choco install ffmpeg
 # On macOS: brew install ffmpeg
 # On Linux: sudo apt install ffmpeg
