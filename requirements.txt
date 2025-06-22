@@ -2,11 +2,8 @@ pandas==2.3.0
 huggingface_hub==0.33.0  # For LLaMA 3
 Flask==2.3.2
 python-dotenv==1.0.1
-openai==1.88.0
-openai-whisper==20231117 # For Whisper
 
-# torch==2.1.2
-# torchaudio==2.1.2
+# openai-whisper==20231117 # For Whisper
 
 
 ffmpeg-python==0.2.0
