@@ -10,7 +10,7 @@ SENDER_PASSWORD = os.getenv("EMAIL_PASSWORD")  # Gmail App Password
 
 def send_confirmation_email(recipient_email: str, token: str, delivery_date: str):
     subject = "✅ Your Time Capsule Is Sealed"
-    access_url = f"https://yourdomain.com/view/{token}"  # Change to your real domain
+    access_url = f"https://voice-time-capsule.onrender.com/view/{token}"  # Change to your real domain
 
     html = f"""
         <div style="font-family: Arial, sans-serif; background: #f6f8fa; padding: 18px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); max-width: 420px; margin: 24px auto;">
@@ -45,7 +45,7 @@ def send_confirmation_email(recipient_email: str, token: str, delivery_date: str
     
 def send_delivery_email(recipient_email: str, token: str):
     subject = "📬 A message from your past self"
-    access_url = f"https://yourdomain.com/view/{token}"  # Replace with your domain
+    access_url = f"https://voice-time-capsule.onrender.com/view/{token}"  # Replace with your domain
 
     html = f"""
     <html>
