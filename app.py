@@ -2,7 +2,7 @@ import os
 import uuid
 from dotenv import load_dotenv
 from flask import Flask, request, render_template
-from utils import gpt_utils, tts_utils, db_utils, cost_tracker, email_utils, whisper_utils_openai
+from utils import gpt_utils, tts_utils, db_utils, cost_tracker, email_utils, whisper_utils
 from email_validator import validate_email, EmailNotValidError
 from datetime import date
 
@@ -66,7 +66,7 @@ def submit():
 
     ### Start process###
     # STT
-    transcript, duration_sec = whisper_utils_openai.transcribe(audio_path)
+    transcript, duration_sec = whisper_utils.transcribe(audio_path)
 
     # LLM (generate response from SST)
     reply = gpt_utils.respond_as_future_self(transcript)
