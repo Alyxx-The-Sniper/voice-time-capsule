@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>〶 Voice Time Capsule</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      background-image: url('/static/img/vtcc.jpg');
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      background-attachment: fixed;
+      min-height: 100vh;
+      position: relative;
+      overflow-x: hidden;
+    }
+    /* Removed the .overlay style */
+    .future-glow {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 540px;
+      height: 540px;
+      z-index: 1;
+      pointer-events: none;
+      opacity: 0.23;
+      background: radial-gradient(circle, #60a5fa 0%, #0ea5e9 80%, transparent 100%);
+      filter: blur(60px);
+      animation: pulseGlow 5s infinite alternate;
+    }
+    @keyframes pulseGlow {
+      0% { opacity: 0.2; filter: blur(60px); }
+      100% { opacity: 0.33; filter: blur(90px); }
+    }
+    .watermark-svg {
+      position: fixed;
+      bottom: 5%;
+      right: 8%;
+      width: 200px;
+      z-index: 1;
+      opacity: 0.08;
+      pointer-events: none;
+      user-select: none;
+      transition: opacity 0.5s;
+    }
+    #meter {
+      width: 100%;
+      height: 8px;
+      background-color: #eee;
+    }
+    #meter-fill {
+      height: 100%;
+      width: 0%;
+      background-color: #10b981;
+      transition: width 0.1s;
+    }
+    #progressBar {
+      transition: width 0.3s;
+    }
+  </style>
+</head>
+<body class="flex flex-col items-center justify-center min-h-screen relative z-10 text-white">
+
+  <!-- Overlay removed for clarity! -->
+  <div class="future-glow"></div>
+  <svg class="watermark-svg" viewBox="0 0 100 160" fill="none">
+    <g filter="url(#shadow)">
+      <rect x="25" y="10" width="50" height="140" rx="25" fill="#38bdf8" fill-opacity="0.2"/>
+      <path d="M25,10 Q50,85 75,10" stroke="#38bdf8" stroke-width="6" fill="none"/>
+      <path d="M25,150 Q50,75 75,150" stroke="#38bdf8" stroke-width="6" fill="none"/>
+      <ellipse cx="50" cy="50" rx="10" ry="4" fill="#38bdf8" fill-opacity="0.4"/>
+      <rect x="48" y="54" width="4" height="38" rx="2" fill="#38bdf8" fill-opacity="0.4"/>
+      <ellipse cx="50" cy="120" rx="14" ry="5" fill="#38bdf8" fill-opacity="0.4"/>
+    </g>
+    <defs>
+      <filter id="shadow" x="0" y="0" width="100" height="160" filterUnits="userSpaceOnUse">
+        <feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="#0ea5e9" flood-opacity="0.18"/>
+      </filter>
+    </defs>
+  </svg>
+
+  <!-- Main content with stronger drop shadows for clarity on images -->
+  <h1 class="text-3xl font-extrabold mt-12 mb-4 text-center text-white drop-shadow-xl">
+    Message to the Future
+  </h1>
+  <p class="text-center text-blue-200 mb-6 drop-shadow font-medium">
+    Send a voice message to your future self—and receive a reply from future you.<br> 
+    Start a conversation across time. This is your digital time capsule.
+  </p>
+
+  <div class="mb-4 w-full max-w-lg px-4">
+    <p id="status" class="text-sm text-white mb-2 font-semibold drop-shadow">
+      🔴 Not recording
+    </p>
+    <div id="meter" class="rounded overflow-hidden mb-4">
+      <div id="meter-fill"></div>
+    </div>
+  </div>
+
+  <div class="flex gap-4 mb-6 w-full max-w-lg px-4">
+    <button id="toggleBtn" class="w-40 text-center px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 shadow-lg">
+      Start Recording
+    </button>
+    <button id="stopBtn" class="w-40 text-center px-4 py-2 bg-slate-500 text-white rounded hover:bg-slate-700 shadow-lg" disabled>
+      Stop
+    </button>
+  </div>
+
+  <form id="submitForm" class="space-y-4 w-full max-w-lg px-4" onsubmit="return false;">
+    <input type="email" id="email" placeholder="Your email" required class="w-full border px-3 py-2 rounded text-black" />
+    <input type="date" id="deliveryDate" required class="w-full border px-3 py-2 rounded text-black" />
+    <div class="relative h-1 bg-blue-200 rounded overflow-hidden">
+      <div id="progressBar" class="absolute top-0 left-0 h-full bg-blue-400" style="width: 0%"></div>
+    </div>
+    <p id="loadingStatus" class="text-sm text-blue-200 mb-2"></p>
+    <button type="button" id="submitBtn" class="w-full bg-blue-700 text-white py-2 rounded hover:bg-blue-800 shadow-lg" disabled>
+      📤 Submit to the Future
+    </button>
+  </form>
+
+  <p class="text-center text-xs text-blue-200 mt-6 drop-shadow">
+    Built by Alexis Mandario · 
+    <a href="https://www.linkedin.com/in/alexis-mandario-b546881a8/" class="underline hover:text-blue-400" target="_blank" rel="noopener noreferrer">LinkedIn</a> · 
+    <a href="mailto:mandarioalexis@gmail.com" class="underline hover:text-blue-400">mandarioalexis@gmail.com</a>.
+  </p>
+
+  <script src="{{ url_for('static', filename='recorder.js') }}"></script>
+</body>
+</html>

@@ -1,0 +1,29 @@
+# requirements.txt
+# ⚠️ NOTE: This project also requires ffmpeg to be installed on your system. (outside .venv)
+# On Windows: choco install ffmpeg
+# On macOS: brew install ffmpeg
+# On Linux: sudo apt install ffmpeg
+
+pandas==2.3.0
+huggingface_hub==0.33.0  # For LLaMA 3
+Flask==2.3.2
+python-dotenv==1.0.1
+openai==1.88.0
+openai-whisper==20231117 # For Whisper
+
+# torch==2.1.2
+# torchaudio==2.1.2
+
+
+ffmpeg-python==0.2.0
+elevenlabs==2.3.0          # For latest client API
+httpx==0.28.1              # Required for HF + ElevenLabs
+email-validator==2.2.0
+
+
+# other (compatibility issue)
+numpy<2.0.0
+
+## for docker
+# RUN apt-get update && apt-get install -y ffmpeg
+gunicorn
