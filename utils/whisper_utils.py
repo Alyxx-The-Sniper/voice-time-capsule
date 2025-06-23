@@ -1,36 +1,55 @@
 import os
+import requests
 import ffmpeg
-from huggingface_hub import InferenceClient
 
-HF_TOKEN = os.environ.get("HF_TOKEN", "")
-
-# Create a global client
-client = InferenceClient(
-    model="openai/whisper-large-v3",
-    token=HF_TOKEN,
-    # provider="fal-ai"  # No longer needed for standard Inference Endpoints
-)
+# Use the correct endpoint (no -turbo for large-v3, change as needed)
+API_URL = "https://router.huggingface.co/hf-inference/models/openai/whisper-large-v3"
+HF_API_KEY = os.environ["HF_API_KEY"]
 
 def get_duration_sec(audio_path: str) -> float:
     """Return the audio duration in seconds using ffmpeg.probe, or 0 if missing."""
     abs_path = os.path.abspath(audio_path).replace("\\", "/")
-    info = ffmpeg.probe(abs_path)
-    duration_str = info.get("format", {}).get("duration", None)
     try:
+        info = ffmpeg.probe(abs_path)
+        duration_str = info.get("format", {}).get("duration", None)
         return float(duration_str) if duration_str else 0.0
-    except Exception:
+    except Exception as e:
+        print("ffmpeg probe error:", e)
         return 0.0
 
 def transcribe(input_path: str) -> tuple[str, float]:
     """
-    Transcribes the audio at input_path using Hugging Face InferenceClient and returns:
-      • text: the transcript
-      • duration: length in seconds, rounded to 2dp
+    Converts any audio file to .flac, then submits to Hugging Face Whisper API.
+    Returns transcript and duration in seconds.
     """
-    abs_path = os.path.abspath(input_path).replace("\\", "/")
-    # This function automatically detects file format (wav, mp3, m4a, flac, etc.)
-    result = client.automatic_speech_recognition(abs_path)
-    # Result is just a dict: {'text': "..."}
-    text = result.get("text", "").strip()
-    duration = get_duration_sec(input_path)
+    # Convert to .flac for API
+    flac_path = os.path.splitext(input_path)[0] + ".flac"
+    try:
+        ffmpeg.input(input_path).output(flac_path).run(overwrite_output=True, quiet=True)
+    except Exception as e:
+        print("ffmpeg conversion error:", e)
+        raise
+
+    # Read flac as bytes
+    with open(flac_path, "rb") as f:
+        audio_data = f.read()
+
+    # Prepare headers
+    headers = {
+        "Authorization": f"Bearer {HF_API_KEY}",
+        "Content-Type": "audio/flac"
+    }
+
+    # Send to Hugging Face
+    response = requests.post(API_URL, headers=headers, data=audio_data)
+    try:
+        response.raise_for_status()
+    except Exception as e:
+        print("Hugging Face API error:", e)
+        print("Response:", response.text)
+        raise
+
+    resp_json = response.json()
+    text = resp_json.get("text", "").strip()
+    duration = get_duration_sec(flac_path)
     return text, round(duration, 2)
