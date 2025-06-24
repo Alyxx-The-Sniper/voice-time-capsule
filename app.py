@@ -51,7 +51,7 @@ def submit():
     # --- 2. Rate limit by IP ---
     ip = request.remote_addr
     today = date.today().isoformat()
-    if db_utils.count_submissions_by_ip(ip, today) >= 4:
+    if db_utils.count_submissions_by_ip(ip, today) >= 7:
         return "❌ You’ve reached the maximun submissions today. Please try again tomorrow", 429
 
     # --- 3. Get delivery date and audio file ---
