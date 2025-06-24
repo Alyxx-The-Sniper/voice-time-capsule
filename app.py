@@ -39,8 +39,15 @@ def index():
 
 @app.route("/submit", methods=["POST"])
 def submit():
+    # --- 1. Rate limit by IP ---
+    ip = request.remote_addr
+    today = date.today().isoformat()
+    if db_utils.count_submissions_by_ip(ip, today) >= 4:
+        return "❌ You’ve reached the maximun submissions today. Please try again tomorrow", 429
+
+    # test submit
     print("==== /submit route hit ====")
-    # --- 1. Validate email ---
+    # --- 2. Validate email ---
     raw_email = request.form.get("email", "")
     try:
         v = validate_email(raw_email, check_deliverability=True)
@@ -48,11 +55,6 @@ def submit():
     except EmailNotValidError as e:
         return f"❌ Invalid email address: {str(e)}", 400
 
-    # --- 2. Rate limit by IP ---
-    ip = request.remote_addr
-    today = date.today().isoformat()
-    if db_utils.count_submissions_by_ip(ip, today) >= 4:
-        return "❌ You’ve reached the maximun submissions today. Please try again tomorrow", 429
 
     # --- 3. Get delivery date and audio file ---
     delivery_date = request.form.get("deliveryDate")
@@ -66,6 +68,7 @@ def submit():
     # --- 4. Save user audio to a temp file first ---
     temp_audio_path = None
     temp_tts_path = None
+
     try:
         with tempfile.NamedTemporaryFile(suffix=".webm", delete=False) as temp_audio:
             temp_audio_path = temp_audio.name
@@ -123,6 +126,7 @@ def submit():
             os.remove(temp_audio_path)
         if temp_tts_path and os.path.exists(temp_tts_path):
             os.remove(temp_tts_path)
+
 
 @app.route("/view/<token>")
 def view_message(token):
