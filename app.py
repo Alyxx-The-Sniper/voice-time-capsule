@@ -2,7 +2,7 @@ import os
 import uuid
 from dotenv import load_dotenv
 
-# 1. Load environment variables early!
+# 1. Load environment variables early! 
 load_dotenv()
 
 from flask import Flask, request, render_template, Response
