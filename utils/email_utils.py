@@ -52,7 +52,7 @@ def send_delivery_email(recipient_email: str, token: str):
         <body>
             <h2>You've got a message from your past self 🎁</h2>
             <p>Open your sealed time capsule message:</p>
-            <a href="{access_url}">{access_url}</a>
+            <a href="{access_url}" style="color: #2366d1; text-decoration: underline;">View future response</a>
             <br><br>
             <small>This message was scheduled to be delivered today.</small>
         </body>

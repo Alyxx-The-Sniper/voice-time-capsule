@@ -3,6 +3,8 @@ from datetime import date
 from utils import db_utils, email_utils
 import sys
 
+
+# code not working -alyx -06/24/25
 def get_due_messages(today: str) -> list[dict]:
     # Use the existing SQLAlchemy function you already have
     return db_utils.get_due_undelivered_messages(today)

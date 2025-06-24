@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Test Audio Upload</title>
+</head>
+<body>
+  <h1>Audio Upload Test</h1>
+  <form action="/submit" method="POST" enctype="multipart/form-data">
+    <label>Email: <input type="email" name="email" required></label><br><br>
+    <label>Delivery Date: <input type="date" name="deliveryDate" required></label><br><br>
+    <label>Audio file:
+      <input type="file" name="audio" accept="audio/*" required>
+    </label><br><br>
+    <button type="submit">Upload</button>
+  </form>
+</body>
+</html>
+
