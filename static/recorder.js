@@ -159,15 +159,14 @@ submitBtn.addEventListener("click", () => {
     if (percent >= 100) clearInterval(fakeInterval);
   }, 30);
 
-// Cycle through steps in sync with progress bar
-stepTimeouts.forEach(clearTimeout);
-stepTimeouts = [];
-steps.forEach((step, idx) => {
-  stepTimeouts.push(setTimeout(() => {
-    loadingStatus.innerText = steps[idx];
-    loadingStatus.className = "text-sm font-bold text-blue-100 text-center mb-2";  // <--- add this line
-  }, idx * stepDuration));
-});
+  // Cycle through steps in sync with progress bar
+  stepTimeouts.forEach(clearTimeout);
+  stepTimeouts = [];
+  steps.forEach((step, idx) => {
+    stepTimeouts.push(setTimeout(() => {
+      loadingStatus.innerText = steps[idx];
+    }, idx * stepDuration));
+  });
 
   // Do the upload for real in parallel
   const fd = new FormData();
@@ -187,7 +186,7 @@ steps.forEach((step, idx) => {
     progressBar.classList.remove("bg-blue-400", "bg-red-600");
     progressBar.classList.add("bg-green-500");
     loadingStatus.innerText = "✅ Submission successful! Check your email. Reloading...";
-    loadingStatus.className = "text-xl text-green-500 mb-2";
+    loadingStatus.className = "text-sm text-green-500 mb-2";
     setTimeout(() => window.location.reload(), 2500);
   };
 

@@ -9,12 +9,15 @@ client = ElevenLabs(api_key=os.getenv("ELEVENLABS_API_KEY"))
 # elevenlabs documentation here: https://elevenlabs.io/docs/product-guides/voices/voice-cloning
 # reference: https://elevenlabs.io/docs/api-reference/voices/ivc/create
 def upload_user_voice(name: str, audio_path: str) -> str:
-    voice = client.voices.ivc.create(
-        name=name,
-        description="Cloned from time capsule submission",
-        files=[open(audio_path, "rb")] # list it can take more voice record to be more accurate for now lets take 1 voice record only
-    )
+    # temp file (close after use)
+    with open(audio_path, "rb") as f:
+        voice = client.voices.ivc.create(
+            name=name,
+            description="Cloned from time capsule submission",
+            files=[f]
+        )
     return voice.voice_id
+
 
 
 
