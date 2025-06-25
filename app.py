@@ -42,7 +42,7 @@ def submit():
     # --- 1. Rate limit by IP ---
     ip = request.remote_addr
     today = date.today().isoformat()
-    if db_utils.count_submissions_by_ip(ip, today) >= 4:
+    if db_utils.count_submissions_by_ip(ip, today) >= 100:
         return "❌ You’ve reached the maximun submissions today. Please try again tomorrow", 429
 
     # test submit
