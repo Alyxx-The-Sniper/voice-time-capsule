@@ -2,9 +2,9 @@ import os
 import requests
 import ffmpeg
 
-# Use the correct endpoint (no -turbo for large-v3, change as needed)
-API_URL = "https://router.huggingface.co/hf-inference/models/openai/whisper-large-v3"
-HF_API_KEY = os.environ["HF_API_KEY"]
+# Deepinfra
+API_URL = "https://api.deepinfra.com/v1/inference/openai/whisper-large-v3"
+DEEPINFRA_API_KEY = os.environ["DEEPINFRA_API_KEY"]
 
 def get_duration_sec(audio_path: str) -> float:
     """Return the audio duration in seconds using ffmpeg.probe, or 0 if missing."""
@@ -36,12 +36,17 @@ def transcribe(input_path: str) -> tuple[str, float]:
 
     # Prepare headers
     headers = {
-        "Authorization": f"Bearer {HF_API_KEY}",
-        "Content-Type": "audio/flac"
+        "Authorization": f"Bearer {DEEPINFRA_API_KEY}",
+        # Don't set Content-Type here!
     }
 
-    # Send to Hugging Face
-    response = requests.post(API_URL, headers=headers, data=audio_data)
+    files = {
+        "audio": ("audio.flac", audio_data, "audio/flac")
+    }
+
+    response = requests.post(API_URL, headers=headers, files=files)
+
+
     try:
         response.raise_for_status()
     except Exception as e:

@@ -1,22 +1,13 @@
 import os
-from huggingface_hub import InferenceClient
+import requests
 
-# ✅ Set your Hugging Face token
-api_key = os.environ.get("HF_API_KEY")
-if not api_key:
-    raise ValueError("Missing HF_API_KEY environment variable.")
+DEEPINFRA_API_KEY = os.environ.get("DEEPINFRA_API_KEY")
+if not DEEPINFRA_API_KEY:
+    raise ValueError("Missing DEEPINFRA_API_KEY environment variable.")
 
-# ✅ Initialize client for Meta-LLaMA-3-8B-Instruct
-client = InferenceClient(
-    model="meta-llama/Meta-Llama-3-8B-Instruct",
-    token=api_key,
-    timeout=30  # optional: avoids hanging forever
-)
+DEEPINFRA_CHAT_URL = "https://api.deepinfra.com/v1/openai/chat/completions"
 
 def respond_as_future_self(original_text: str) -> str:
-    """
-    Responds as the user's future self using Meta-LLaMA-3-8B.
-    """
     if not original_text.strip():
         return "🤖 (No message detected — please record a message first.)"
 
@@ -26,7 +17,7 @@ def respond_as_future_self(original_text: str) -> str:
             "content": (
                 "You are from the future—older, wiser, and more compassionate. "
                 "You just received a message from your past self in a time capsule app. "
-                "Respond with casual,  warmth, honesty, and emotional intelligence. "
+                "Respond with casual, warmth, honesty, and emotional intelligence. "
                 "You can be playful or reflective—just be sincere and human. "
                 "Remember you are responding to your past self. "
                 "If necessary respond in Taglish, mixing Tagalog and English naturally. "
@@ -39,13 +30,22 @@ def respond_as_future_self(original_text: str) -> str:
         }
     ]
 
+    payload = {
+        "model": "meta-llama/Meta-Llama-3-8B-Instruct",
+        "messages": messages,
+        "temperature": 0.8,
+        "max_tokens": 146,
+        "top_p": 0.9,
+        "frequency_penalty": 1.0
+    }
 
-    response = client.chat_completion(
-        messages=messages,
-        temperature=0.8,
-        max_tokens=146,
-        top_p=0.9,
-        frequency_penalty=1.0
-    )
+    headers = {
+        "Authorization": f"Bearer {DEEPINFRA_API_KEY}",
+        "Content-Type": "application/json"
+    }
 
-    return response.choices[0].message.content.strip()
+    response = requests.post(DEEPINFRA_CHAT_URL, json=payload, headers=headers, timeout=30)
+    response.raise_for_status()
+    data = response.json()
+    # Check structure and extract content
+    return data["choices"][0]["message"]["content"].strip()
