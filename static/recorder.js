@@ -1,4 +1,3 @@
-
 // Recording variables
 let mediaRecorder, audioChunks = [], recordedBlob = null,
     audioContext, analyser, meterInterval,
@@ -13,7 +12,7 @@ const toggleBtn   = document.getElementById("toggleBtn"),
       meterFill   = document.getElementById("meter-fill"),
       progressBar = document.getElementById("progressBar"),
       loadingStatus = document.getElementById("loadingStatus"),
-      emailInput  = document.getElementById("email"),
+      nameInput   = document.getElementById("name"),
       dateInput   = document.getElementById("deliveryDate");
 
 function startMeter(stream) {
@@ -111,7 +110,7 @@ const steps = [
   "🛰️ Dispatching capsule to the future..."
 ];
 
-const totalDuration = 12000; // 12 seconds for full "loading"
+const totalDuration = 12000;
 const stepDuration = totalDuration / steps.length;
 
 let fakeInterval, stepTimeouts = [];
@@ -120,10 +119,10 @@ submitBtn.addEventListener("click", () => {
   if (isSubmitting) return;
   isSubmitting = true;
 
-  const email = emailInput.value.trim();
-  const date  = dateInput.value;
-  if (!email || !date) {
-    alert("Please enter email & delivery date.");
+  const name = nameInput.value.trim();
+  const date = dateInput.value;
+  if (!name || !date) {
+    alert("Please enter your name and delivery date.");
     isSubmitting = false;
     return;
   }
@@ -140,17 +139,15 @@ submitBtn.addEventListener("click", () => {
   }
 
   submitBtn.disabled = true;
-  emailInput.disabled = true;
+  nameInput.disabled = true;
   dateInput.disabled = true;
 
-  // --- Animate loading bar and steps (fake until upload finishes) ---
   progressBar.style.width = "0%";
   progressBar.classList.remove("bg-green-500", "bg-red-600");
   progressBar.classList.add("bg-blue-400");
   loadingStatus.innerText = steps[0];
   loadingStatus.className = "text-sm text-blue-100 mb-2";
 
-  // Fake progress bar animation
   let startTime = Date.now();
   fakeInterval = setInterval(() => {
     const elapsed = Date.now() - startTime;
@@ -159,7 +156,6 @@ submitBtn.addEventListener("click", () => {
     if (percent >= 100) clearInterval(fakeInterval);
   }, 30);
 
-  // Cycle through steps in sync with progress bar
   stepTimeouts.forEach(clearTimeout);
   stepTimeouts = [];
   steps.forEach((step, idx) => {
@@ -168,26 +164,41 @@ submitBtn.addEventListener("click", () => {
     }, idx * stepDuration));
   });
 
-  // Do the upload for real in parallel
   const fd = new FormData();
-  fd.append("email", email);
+  fd.append("name", name);
   fd.append("deliveryDate", date);
   fd.append("audio", recordedBlob, "voice.webm");
 
   const xhr = new XMLHttpRequest();
   xhr.open("POST", "/submit", true);
 
-  // When upload finishes, immediately fill the bar & show last step
   xhr.onload = () => {
     isSubmitting = false;
     clearInterval(fakeInterval);
     stepTimeouts.forEach(clearTimeout);
-    progressBar.style.width = "100%";
-    progressBar.classList.remove("bg-blue-400", "bg-red-600");
-    progressBar.classList.add("bg-green-500");
-    loadingStatus.innerText = "✅ Submission successful! Check your email. Reloading...";
-    loadingStatus.className = "text-sm text-green-500 mb-2";
-    setTimeout(() => window.location.reload(), 2500);
+    if (xhr.status === 200) {
+      try {
+        const resp = JSON.parse(xhr.responseText);
+        if (resp.redirect_url) {
+          loadingStatus.innerText = "✅ Submission successful! Redirecting…";
+          loadingStatus.className = "text-sm text-green-500 mb-2";
+          window.location.href = resp.redirect_url;
+          return;
+        }
+      } catch {}
+      loadingStatus.innerText = "✅ Submission successful! Reloading…";
+      loadingStatus.className = "text-sm text-green-500 mb-2";
+      setTimeout(() => window.location.reload(), 2000);
+    } else {
+      progressBar.style.width = "0%";
+      progressBar.classList.remove("bg-blue-400", "bg-green-500");
+      progressBar.classList.add("bg-red-600");
+      loadingStatus.innerText = "❌ Submission error. Please try again.";
+      loadingStatus.className = "text-sm text-red-600 mb-2";
+      submitBtn.disabled = false;
+      nameInput.disabled = false;
+      dateInput.disabled = false;
+    }
   };
 
   xhr.onerror = () => {
@@ -200,7 +211,7 @@ submitBtn.addEventListener("click", () => {
     loadingStatus.innerText = "❌ Network error. Please try again.";
     loadingStatus.className = "text-sm text-red-600 mb-2";
     submitBtn.disabled = false;
-    emailInput.disabled = false;
+    nameInput.disabled = false;
     dateInput.disabled = false;
   };
 

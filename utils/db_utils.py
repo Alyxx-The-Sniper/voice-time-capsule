@@ -16,6 +16,7 @@ Base = declarative_base()
 class Message(Base):
     __tablename__ = 'messages'
     token = Column(String, primary_key=True)
+    name = Column(String)
     email = Column(String)
     ip = Column(String)
     created_at = Column(String)
@@ -48,6 +49,7 @@ def init_db():
 
 def insert_message(
     token: str,
+    name: str,
     email: str,
     ip: str,
     created_at: str,
@@ -63,6 +65,7 @@ def insert_message(
     try:
         msg = Message(
             token=token,
+            name=name,
             email=email,
             ip=ip,
             created_at=created_at,
@@ -120,5 +123,17 @@ def count_submissions_by_ip(ip: str, date_str: str) -> int:
             func.DATE(Message.created_at) == date_str
         ).scalar()
         return count
+    finally:
+        session.close()
+
+
+def update_message_email(token: str, email: str) -> None:
+    """Update the email for a specific message."""
+    session = SessionLocal()
+    try:
+        msg = session.query(Message).filter_by(token=token).first()
+        if msg:
+            msg.email = email
+            session.commit()
     finally:
         session.close()

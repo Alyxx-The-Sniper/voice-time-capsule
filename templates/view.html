@@ -64,6 +64,49 @@
     <audio controls class="w-full rounded shadow-lg bg-slate-900" src="{{ ai_audio }}"></audio>
 
 
+
+
+
+<div class="mt-8 flex justify-center">
+  <form action="/send_audio" method="post" class="w-full max-w-2xl bg-white/10 rounded-2xl shadow-lg px-8 py-6 flex flex-col md:flex-row items-center gap-4 md:gap-6">
+    <input type="hidden" name="token" value="{{ token }}">
+    <p class="text-cyan-100 text-base font-medium mb-2 md:mb-0 md:mr-2 md:w-1/3 text-center md:text-left">
+      Want a copy? Enter your email:
+    </p>
+    <input 
+      type="email" 
+      name="email" 
+      placeholder="you@email.com" 
+      class="flex-1 bg-white/80 text-gray-800 px-4 py-2 rounded-xl border border-cyan-200 focus:ring-2 focus:ring-cyan-300 outline-none shadow"
+    />
+    <button 
+      type="submit"
+      class="bg-cyan-500 hover:bg-cyan-600 text-white font-semibold py-2 px-6 rounded-xl shadow transition"
+    >
+      Send
+    </button>
+  </form>
+</div>
+
+
+
+
+
+{% if email_status %}
+  <div class="mb-4 p-3 bg-green-600/90 text-white rounded-xl text-center font-semibold">
+    {{ email_status }}
+  </div>
+{% endif %}
+
+
+
+
+
+
+
+
+
+
     <div class="mt-10 text-center text-xs text-cyan-200 drop-shadow">
       — Time Capsule System · <span class="text-cyan-400">For your ears only</span> —
     </div>
@@ -73,6 +116,7 @@
   <a href="https://www.linkedin.com/in/alexis-mandario-b546881a8/" class="underline hover:text-blue-400" target="_blank" rel="noopener noreferrer">LinkedIn</a> · 
   <a href="mailto:mandarioalexis@gmail.com" class="underline hover:text-blue-400">mandarioalexis@gmail.com</a>.
 </p>
+
 
 
   </main>

@@ -1,24 +1,21 @@
 import os
 import uuid
-from dotenv import load_dotenv
+from flask import Flask, request, render_template, jsonify, redirect, url_for, Response, flash, session
+from datetime import date
+import tempfile
 
-# 1. Load environment variables early!
+# If you use dotenv
+from dotenv import load_dotenv
 load_dotenv()
 
-from flask import Flask, request, render_template, Response
 from utils import gpt_utils, tts_utils, db_utils, cost_tracker, email_utils, whisper_utils
-from email_validator import validate_email, EmailNotValidError
-from datetime import date
+from utils.s3_utils import upload_audio_to_s3
+
 from sqlalchemy import create_engine
 import pandas as pd
 from markupsafe import Markup
-from utils.s3_utils import upload_audio_to_s3
-import tempfile
 from functools import wraps
 
-
-
-# 2. Database Config (WORKS for SQLite & PostgreSQL)
 DATABASE_URL = os.environ.get('DATABASE_URL', 'sqlite:///db.sqlite')
 if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
@@ -27,45 +24,29 @@ app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
 engine = create_engine(DATABASE_URL)
 
-
-# 3. Init DB Tables
 with app.app_context():
     db_utils.init_db()
 
-# ---- 4. Your Routes ----
 @app.route("/")
 def index():
     return render_template("index.html")
 
 @app.route("/submit", methods=["POST"])
 def submit():
-    # --- 1. Rate limit by IP ---
     ip = request.remote_addr
     today = date.today().isoformat()
     if db_utils.count_submissions_by_ip(ip, today) >= 100:
-        return "❌ You’ve reached the maximun submissions today. Please try again tomorrow", 429
+        return jsonify({'error': "Rate limit reached"}), 429
 
-    # test submit
-    print("==== /submit route hit ====")
-    # --- 2. Validate email ---
-    raw_email = request.form.get("email", "")
-    try:
-        v = validate_email(raw_email, check_deliverability=True)
-        email = v.email
-    except EmailNotValidError as e:
-        return f"❌ Invalid email address: {str(e)}", 400
-
-
-    # --- 3. Get delivery date and audio file ---
+    name = request.form.get("name", "")
     delivery_date = request.form.get("deliveryDate")
     audio_file = request.files.get("audio")
-    if not email or not delivery_date or not audio_file:
-        return "Missing form fields", 400
+    if not name or not delivery_date or not audio_file:
+        return jsonify({'error': "Missing form fields"}), 400
 
     token = uuid.uuid4().hex[:8]
     filename = f"{token}.webm"
 
-    # --- 4. Save user audio to a temp file first ---
     temp_audio_path = None
     temp_tts_path = None
 
@@ -74,32 +55,27 @@ def submit():
             temp_audio_path = temp_audio.name
             audio_file.save(temp_audio_path)
 
-        # --- 5. Transcribe from local temp file ---
         transcript, duration_sec = whisper_utils.transcribe(temp_audio_path)
 
-        # --- 6. Upload the original user audio to S3 ---
         with open(temp_audio_path, "rb") as f:
             audio_url = upload_audio_to_s3(f, f"audio/{filename}")
 
-        # --- 7. Continue with LLM and TTS pipeline ---
         reply = gpt_utils.respond_as_future_self(transcript)
-        voice_id = tts_utils.upload_user_voice(name=email, audio_path=temp_audio_path)
+        voice_id = tts_utils.upload_user_voice(name=name, audio_path=temp_audio_path)
 
-        # --- 8. Synthesize AI voice, save to temp file ---
         with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as tempf:
             temp_tts_path = tempf.name
 
         tts_utils.synthesize(reply, temp_tts_path, voice_id)
 
-        # --- 9. Upload synthesized AI voice to S3 ---
         ai_voice_filename = f"audio/{token}_ai.mp3"
         with open(temp_tts_path, "rb") as f:
             ai_audio_url = upload_audio_to_s3(f, ai_voice_filename)
 
-        # --- 10. Save everything to DB ---
         db_utils.insert_message(
             token=token,
-            email=email,
+            name=name,
+            email=None,
             ip=ip,
             created_at=today,
             delivery_date=delivery_date,
@@ -118,8 +94,8 @@ def submit():
             tts_chars=len(reply)
         )
 
-        email_utils.send_confirmation_email(email, token, delivery_date)
-        return f"✅ Your time capsule is sealed! You’ll receive it on {delivery_date}."
+        # Respond with redirect URL
+        return jsonify({'redirect_url': url_for('view_message', token=token)})
 
     finally:
         if temp_audio_path and os.path.exists(temp_audio_path):
@@ -133,8 +109,48 @@ def view_message(token):
     message = db_utils.get_message_by_token(token)
     if not message:
         return "❌ Message not found", 404
-    return render_template("view.html", **message)
+    # Grab feedback from query param if present
+    sent = request.args.get("sent")
+    email_status = None
+    if sent == "1":
+        email_status = "✅ Email sent! Check your inbox."
+    elif sent == "0":
+        email_status = "❌ There was a problem sending the email."
+    return render_template("view.html", email_status=email_status, **message)
 
+
+
+
+# Email sending from view page is handled via another route (POST from the form on view.html)
+@app.route("/send_audio", methods=["POST"])
+def send_audio():
+    email = request.form.get("email", "").strip()
+    token = request.form.get("token", "").strip()
+    if not email or not token:
+        # Ideally flash an error or handle
+        return redirect(url_for('view_message', token=token, sent=0))
+
+    # Find audio_file by token in DB
+    message = db_utils.get_message_by_token(token)
+    if not message:
+        return "❌ Message not found", 404
+
+    audio_url = message['ai_audio']  
+
+    # Update the database with the new email!
+    db_utils.update_message_email(token, email)
+
+
+    # Send the audio via email (implement email_utils.send_audio_email)
+    try:
+        email_utils.send_audio_email(email, audio_url)
+        # Pass success info to the template
+        return redirect(url_for('view_message', token=token, sent=1))
+    except Exception as e:
+        print("Email send error:", e)
+        return redirect(url_for('view_message', token=token, sent=0))
+
+# Admin panel code (unchanged)
 ADMIN_USERNAME = os.environ.get("ADMIN_USERNAME", "admin")
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "changeme")
 
@@ -168,4 +184,3 @@ def admin():
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
-

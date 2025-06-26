@@ -1,29 +1,25 @@
-import smtplib
-from email.mime.text import MIMEText
+from email.mime.base import MIMEBase
+from email import encoders
+import requests
 from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 import os
+import smtplib
+
 
 SMTP_SERVER = "smtp.gmail.com"
 SMTP_PORT = 587
 SENDER_EMAIL = os.getenv("EMAIL_SENDER")       # Your Gmail address
 SENDER_PASSWORD = os.getenv("EMAIL_PASSWORD")  # Gmail App Password
 
-def send_confirmation_email(recipient_email: str, token: str, delivery_date: str):
-    subject = "✅ Your Time Capsule Is Sealed"
-    access_url = f"https://voice-time-capsule-production.up.railway.app//view/{token}"  # Change to your real domain
-
-    html = f"""
-        <div style="font-family: Arial, sans-serif; background: #f6f8fa; padding: 18px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); max-width: 420px; margin: 24px auto;">
-        <p>Your message has been delivered, but your future self can’t send messages to the past.</p> 
-        <p>You’ll receive a response on <b>{delivery_date}</b>.</p>
-        <p style="margin-top: 18px;">Can’t wait that long? Okay, I’ll time travel for you and retrieve the message instantly! 😄<br>
-        Here you go—a voice time capsule sealed just for you:</p>
-        <a href="{access_url}" style="color: #2366d1; text-decoration: underline;">View future response</a>
-
-        <p style="margin-top: 18px;">Note: This is a demo only.The link is supposed to be available on your chosen future date.</p>
-
+def send_audio_email(recipient_email: str, audio_url: str):
+    subject = "🔊 Your Voice Time Capsule Audio Copy"
+    html = """
+        <div style="font-family: Arial, sans-serif;">
+            <h3>Here's your copy as requested!</h3>
+            <p>Your future self voice message is attached as an audio file. Thank you for using Voice Time Capsule!</p>
+            <p><small>If you have trouble playing the file, reply to this email for help.</small></p>
         </div>
-
     """
 
     msg = MIMEMultipart("alternative")
@@ -32,45 +28,25 @@ def send_confirmation_email(recipient_email: str, token: str, delivery_date: str
     msg["To"] = recipient_email
     msg.attach(MIMEText(html, "html"))
 
-    try:
-        with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
-            server.starttls()
-            server.login(SENDER_EMAIL, SENDER_PASSWORD)
-            server.sendmail(SENDER_EMAIL, recipient_email, msg.as_string())
-        print(f"📧 Confirmation sent to {recipient_email}")
-    except Exception as e:
-        print(f"❌ Failed to send email: {e}")
-        
-
-    
-def send_delivery_email(recipient_email: str, token: str):
-    subject = "📬 A message from your past self"
-    access_url = f"https://voice-time-capsule-production.up.railway.app//view/{token}"  # Replace with your domain
-
-    html = f"""
-    <html>
-        <body>
-            <h2>You've got a message from your past self 🎁</h2>
-            <p>Open your sealed time capsule message:</p>
-            <a href="{access_url}" style="color: #2366d1; text-decoration: underline;">View future response</a>
-            <br><br>
-            <small>This message was scheduled to be delivered today.</small>
-        </body>
-    </html>
-    """
-
-    msg = MIMEMultipart("alternative")
-    msg["Subject"] = subject
-    msg["From"] = SENDER_EMAIL
-    msg["To"] = recipient_email
-    msg.attach(MIMEText(html, "html"))
+    # Download the audio file from S3 or your storage URL
+    audio_response = requests.get(audio_url)
+    if audio_response.status_code == 200:
+        part = MIMEBase('audio', 'mp3')
+        part.set_payload(audio_response.content)
+        encoders.encode_base64(part)
+        part.add_header(
+            'Content-Disposition',
+            f'attachment; filename="your_voice_capsule.mp3"'
+        )
+        msg.attach(part)
+    else:
+        print("❌ Could not download audio file to attach.")
 
     try:
         with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
             server.starttls()
             server.login(SENDER_EMAIL, SENDER_PASSWORD)
             server.sendmail(SENDER_EMAIL, recipient_email, msg.as_string())
-        print(f"📧 Delivery email sent to {recipient_email}")
+        print(f"📧 Audio sent to {recipient_email}")
     except Exception as e:
-        print(f"❌ Delivery email failed: {e}")
-
+        print(f"❌ Failed to send audio email: {e}")
