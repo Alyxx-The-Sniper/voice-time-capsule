@@ -1,0 +1,19 @@
+__pycache__/
+*.pyc
+*.pyo
+
+# do not copy environmemt varialbes in docker images 
+# to use .env= docker run --env-file .env -p 8080:8080 voice-time-capsule:latest
+.env 
+
+.git
+
+.gitignore
+
+dockerfile
+static/audio
+db.sqlite
+render-build.sh
+sample1.flac
+test.py
+
