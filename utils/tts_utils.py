@@ -19,8 +19,6 @@ def upload_user_voice(name: str, audio_path: str) -> str:
     return voice.voice_id
 
 
-
-
 def synthesize(text: str, output_path: str, voice_id: str) -> str:
     audio_stream = client.text_to_speech.convert(
         voice_id=voice_id,

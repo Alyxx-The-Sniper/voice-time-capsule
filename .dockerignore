@@ -7,7 +7,7 @@ __pycache__/
 .env 
 
 .git
-
+git st
 .gitignore
 
 dockerfile
