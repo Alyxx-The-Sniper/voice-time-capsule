@@ -1,31 +1,16 @@
-# Python
 __pycache__/
 *.py[cod]
 *.pyo
-
-# Virtual environments
 .venv/
 env/
 venv/
-
-# Environment variables
 .env
-
-# SQLite database
 *.sqlite
-
-# VS Code
 .vscode/
-
-# Docker
-*.dockerignore
-
-# OS generated
 .DS_Store
 Thumbs.db
-
-# Misc
 *.log
 
 ####################
 static/audio/
+
