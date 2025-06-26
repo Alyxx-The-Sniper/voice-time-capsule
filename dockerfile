@@ -3,6 +3,7 @@ FROM python:3.11-slim
 
 # Install ffmpeg
 RUN apt-get update && apt-get install -y ffmpeg
+RUN which ffmpeg && ffmpeg -version
 
 
 # Set working directory
@@ -18,8 +19,8 @@ COPY . .
 # Set environment variables (optional, can also be set in Render)
 # ENV FLASK_ENV=production
 
-# Expose the port Flask runs on
-EXPOSE 10000
 
-# Command to run your app
-CMD ["gunicorn", "app:app", "--bind", "0.0.0.0:10000"]
+# Expose the port Flask runs on
+EXPOSE 8080
+CMD ["gunicorn", "app:app", "--bind", "0.0.0.0:8080"]
+
